@@ -3,6 +3,7 @@ package com.hackathon.igfeels;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -27,11 +28,16 @@ import com.affectiva.android.affdex.sdk.detector.PhotoDetector;
 import com.affectiva.android.affdex.sdk.Frame;
 import com.affectiva.igfeels.R;
 import com.hackathon.igfeels.api.ApiFactory;
+import com.hackathon.igfeels.api.EmptyResponse;
+import com.hackathon.igfeels.api.PavlokApiFactory;
 import com.hackathon.igfeels.instagramApi.ApplicationData;
 import com.hackathon.igfeels.instagramApi.InstagramApp;
 import com.hackathon.igfeels.instagramApi.InstagramSession;
 import com.hackathon.igfeels.instagramApi.MediaResult;
+import com.hackathon.igfeels.instagramApi.UserEntry;
+import com.hackathon.igfeels.instagramApi.UserProfileResult;
 import com.hackathon.igfeels.instagramApi.UserQueryResult;
+import com.squareup.okhttp.RequestBody;
 import com.squareup.picasso.Picasso;
 
 import java.io.FileNotFoundException;
@@ -76,6 +82,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
     PhotoDetector detection;
     int currentIndex;
     String token;
+    String objectId;
 
     private class ImageDownloadTask extends AsyncTask<Void, Void, Frame>{
         @Override
@@ -115,12 +122,52 @@ public class MainActivity extends Activity implements Detector.ImageListener {
                     wv.getSettings().setAllowFileAccessFromFileURLs(true);
                     wv.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
                     wv.getSettings().setDisplayZoomControls(true);
+                    wv.getSettings().setSupportZoom(true);
+                    wv.getSettings().setBuiltInZoomControls(true);
                     wv.getSettings().setJavaScriptEnabled(true);
 
+                    EmotionResults mostRecent = results.get(0);
+
+                    String title = "";
+                    String alert = "";
+                    if(greaterThanAllOthers(mostRecent.getAnger(), mostRecent.getSadness(),
+                            mostRecent.getEngagement(), mostRecent.getHappiness())){
+                        title = "Anger!";
+                        alert = "shock";
+                    } else if (greaterThanAllOthers(mostRecent.getHappiness(), mostRecent.getSadness(),
+                            mostRecent.getEngagement(), mostRecent.getAnger())) {
+                        title = "Happiness!";
+                        alert = "vibrate";
+                    } else if (greaterThanAllOthers(mostRecent.getSadness(), mostRecent.getAnger(),
+                            mostRecent.getEngagement(), mostRecent.getHappiness())) {
+                        title = "Sadness :(";
+                        alert = "beep";
+                    } else {
+                        title = "Engagement?";
+                        alert = "vibrate";
+                    }
+
+                    final String finalTitle = title;
+                    final String finalAlert = alert;
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Emotions Graph")
                             .setView(wv)
                             .setPositiveButton("Okay", null)
+                            .setNeutralButton("Send " + title, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    PavlokApiFactory.getApi().sendAlert(objectId,
+                                            finalAlert, finalAlert).enqueue(new Callback<EmptyResponse>() {
+                                        @Override
+                                        public void onResponse(Response<EmptyResponse> response, Retrofit retrofit) {
+                                        }
+
+                                        @Override
+                                        public void onFailure(Throwable t) {
+                                        }
+                                    });
+                                }
+                            })
                             .show();
 
                     wv.loadUrl("file:///android_asset/www/chart.html" + out);
@@ -144,6 +191,13 @@ public class MainActivity extends Activity implements Detector.ImageListener {
                 }
             }
         }
+    }
+
+    private boolean greaterThanAllOthers(float f, float... f2){
+        for(float f3 : f2){
+            if(f3 > f) return false;
+        }
+        return true;
     }
 
     private class EmotionResults {
@@ -268,13 +322,37 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         });
     }
 
-    public void fetchMediaFromUserId(int userId){
+    private void fetchUserProfile(final int userId){
+        ApiFactory.getApi().getUserProfile(String.valueOf(userId), token).enqueue(new Callback<UserProfileResult>() {
+            @Override
+            public void onResponse(Response<UserProfileResult> response, Retrofit retrofit) {
+                Log.d(TAG, response.body().toString());
+
+                try {
+                    String bio = response.body().getData().getBio();
+                    int pavIdIndex = bio.indexOf("pavid=");
+                    if(pavIdIndex != -1){
+                        objectId = bio.substring(pavIdIndex + 6);
+                        Log.d(TAG, objectId);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.d(TAG, "onFailure: " + t.getMessage());
+            }
+        });
+    }
+
+    public void fetchMediaFromUserId(final int userId){
         ApiFactory.getApi().getUserMedia(String.valueOf(userId), token).enqueue(new Callback<MediaResult>() {
             @Override
             public void onResponse(Response<MediaResult> response, Retrofit retrofit) {
                 MediaResult mr = response.body();
                 if(mr != null && mr.getData().length > 0){
                     displayImages(mr.getData());
+                    fetchUserProfile(userId);
                 } else {
                     Toast.makeText(MainActivity.this, "No images from the user :(", Toast.LENGTH_SHORT).show();
                 }
