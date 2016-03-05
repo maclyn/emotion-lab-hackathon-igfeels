@@ -1,0 +1,45 @@
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.hackathon.igfeels.MainActivity"
+    android:layout_margin="16dp"
+    android:keepScreenOn="true">
+
+    <EditText
+        android:id="@+id/celebName"
+        android:layout_alignParentTop="true"
+        android:hint="Type an Instagram username"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/doTheThing"
+        android:layout_below="@+id/celebName"
+        android:text="Fetch images"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <ScrollView
+        android:layout_below="@+id/doTheThing"
+        android:layout_width="match_parent"
+        android:layout_above="@+id/analyze"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:id="@+id/container"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:layout_alignParentBottom="true"
+        android:id="@+id/analyze"
+        android:text="Analyze"
+        android:enabled="false"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</RelativeLayout>
