@@ -1,0 +1,120 @@
+<html>
+<head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+
+
+
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+
+    function convertParametersToArray(data)
+    {
+
+      var count = getParameterByName('count'); // "lorem"
+      var array = [];
+
+      if (parseInt(count))
+      {
+        count = parseInt(count);
+      }
+
+      var curArray=[];
+
+      data.addColumn('string', 'Image#');
+      data.addColumn('number', 'Anger');
+      data.addColumn('number', 'Engagement');
+      data.addColumn('number', 'Joy');
+      data.addColumn('number', 'Sadness');
+
+      for(var i=0; i< count; i++)
+      {
+      curArray=[];
+      var cur_imageid = i.toString();//getParameterByName('image' + i + '_imageid');
+      //var cur_username = getParameterByName('image' + i + '_username');
+      var cur_anger = parseFloat(getParameterByName('image' + i + '_anger'));
+var cur_contempt = parseFloat(getParameterByName('image' + i + '_contempt'));
+//var cur_disgust = parseFloat(getParameterByName('image' + i + '_disgust'));
+var cur_engagement = parseFloat(getParameterByName('image' + i + '_engagement'));
+//var cur_fear = parseFloat(getParameterByName('image' + i + '_fear'));
+var cur_joy = parseFloat(getParameterByName('image' + i + '_joy'));
+ var cur_sadness = parseFloat(getParameterByName('image' + i + '_sadness'));
+// var cur_surprise = parseFloat(getParameterByName('image' + i + '_surprise'));
+// var cur_valence = parseFloat(getParameterByName('image' + i + '_valence'));
+// var cur_attention = parseFloat(getParameterByName('image' + i + '_attention'));
+// var cur_brow_furrow = parseFloat(getParameterByName('image' + i + '_brow_furrow'));
+// var cur_brow_raise = parseFloat(getParameterByName('image' + i + '_brow_raise'));
+// var cur_chin_raise = parseFloat(getParameterByName('image' + i + '_chin_raise'));
+// var cur_eye_closure = parseFloat(getParameterByName('image' + i + '_eye_closure'));
+// var cur_inner_brow_raise = parseFloat(getParameterByName('image' + i + '_inner_brow_raise'));
+// var cur_lip_depressor = parseFloat(getParameterByName('image' + i + '_lip_depressor'));
+// var cur_lip_press = parseFloat(getParameterByName('image' + i + '_lip_press'));
+// var cur_lip_pucker = parseFloat(getParameterByName('image' + i + '_lip_pucker'));
+// var cur_lip_suck = parseFloat(getParameterByName('image' + i + '_lip_suck'));
+// var cur_mouth_open = parseFloat(getParameterByName('image' + i + '_mouth_open'));
+// var cur_nose_wrinkle = parseFloat(getParameterByName('image' + i + '_nose_wrinkle'));
+// var cur_smile = parseFloat(getParameterByName('image' + i + '_smile'));
+// var cur_smirk = parseFloat(getParameterByName('image' + i + '_smirk'));
+// var cur_upper_lip_raise = parseFloat(getParameterByName('image' + i + '_upper_lip_raise'));
+// var cur_yaw = parseFloat(getParameterByName('image' + i + '_yaw'));
+// var cur_pitch = parseFloat(getParameterByName('image' + i + '_pitch'));
+// var cur_roll = parseFloat(getParameterByName('image' + i + '_roll'));
+// var cur_inter_ocular_distance = parseFloat(getParameterByName('image' + i + '_inter_ocular_distance'));
+// var cur_gender = parseFloat(getParameterByName('image' + i + '_gender'));
+        
+
+
+       // curArray = [cur_imageid, cur_anger,cur_engagement,cur_joy,cur_sadness];   
+     //   curArray = [cur_anger,cur_contempt,cur_disgust,cur_engagement,cur_fear,cur_joy,cur_sadness,cur_surprise,cur_valence,cur_attention,cur_brow_furrow,cur_brow_raise,cur_chin_raise,cur_eye_closure,cur_inner_brow_raise,cur_lip_depressor,cur_lip_press,cur_lip_pucker,cur_lip_suck,cur_mouth_open,cur_nose_wrinkle,cur_smile,cur_smirk,cur_upper_lip_raise,cur_yaw,cur_pitch,cur_roll,cur_inter_ocular_distance,cur_gender];
+data.addRow([cur_imageid, cur_anger,cur_engagement,cur_joy,cur_sadness]); 
+
+//alert(data);
+
+
+      }
+
+return(array);
+    } 
+
+
+
+      google.charts.load('current', {'packages':['line']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+          var data = new google.visualization.DataTable();
+
+          convertParametersToArray(data);
+
+        // var data = google.visualization.arrayToDataTable([
+        //   ['Year', 'Sales', 'Expenses'],
+        //   ['2004',  1000,      400],
+        //   ['2005',  1170,      460],
+        //   ['2006',  660,       1120],
+        //   ['2007',  1030,      540]
+        // ]);
+
+        var options = {
+          title: 'Emotions',
+          curveType: 'none',
+          legend: { position: 'bottom' }
+        };
+
+        var chart = new google.charts.Line(document.getElementById('curve_chart'));
+
+        chart.draw(data, options);
+      }
+    </script>
+</head>
+<body>
+<div id="curve_chart" style="width: 900px; height: 500px"></div>
+</body>
+</html>

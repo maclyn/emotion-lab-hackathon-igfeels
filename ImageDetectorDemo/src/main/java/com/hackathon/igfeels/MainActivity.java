@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -23,6 +25,7 @@ import com.affectiva.android.affdex.sdk.detector.Detector;
 import com.affectiva.android.affdex.sdk.detector.Face;
 import com.affectiva.android.affdex.sdk.detector.PhotoDetector;
 import com.affectiva.android.affdex.sdk.Frame;
+import com.affectiva.igfeels.R;
 import com.hackathon.igfeels.api.ApiFactory;
 import com.hackathon.igfeels.instagramApi.ApplicationData;
 import com.hackathon.igfeels.instagramApi.InstagramApp;
@@ -35,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -68,6 +72,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
     InstagramApp mApp;
     AlertDialog ad;
     MediaResult.MediaElement[] imageData;
+    List<EmotionResults> results;
     PhotoDetector detection;
     int currentIndex;
     String token;
@@ -91,6 +96,38 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         protected void onPostExecute(Frame result) {
             if(result == null){ //At end of list/error
                 ad.dismiss();
+
+                if(results.size() > 0){
+                    Toast.makeText(MainActivity.this, "Found " + results.size() + " faces.", Toast.LENGTH_SHORT).show();
+
+                    String out = "?count=" + results.size();
+                    for(int i = 0; i < results.size(); i++){
+                        out += "&image" + i + "_imageid=" + i;
+                        out += "&image" + i + "_joy=" + String.format("%1.3f", results.get(i).getHappiness() / 100);
+                        out += "&image" + i + "_sadness=" + String.format("%1.3f", results.get(i).getSadness() / 100);
+                        out += "&image" + i + "_anger=" + String.format("%1.3f", results.get(i).getAnger() / 100);
+                        out += "&image" + i + "_engagement=" + String.format("%1.3f", results.get(i).getEngagement() / 100);
+                    }
+
+                    WebView wv = new WebView(MainActivity.this);
+                    wv.getSettings().setAllowContentAccess(true);
+                    wv.getSettings().setAllowFileAccess(true);
+                    wv.getSettings().setAllowFileAccessFromFileURLs(true);
+                    wv.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+                    wv.getSettings().setDisplayZoomControls(true);
+                    wv.getSettings().setJavaScriptEnabled(true);
+
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Emotions Graph")
+                            .setView(wv)
+                            .setPositiveButton("Okay", null)
+                            .show();
+
+                    wv.loadUrl("file:///android_asset/www/chart.html" + out);
+                    Log.d(TAG, "To feed: " + out);
+                } else {
+                    Toast.makeText(MainActivity.this, "No faces found in the photos!", Toast.LENGTH_SHORT).show();
+                }
             } else {
                 try {
                     detection = new PhotoDetector(MainActivity.this);
@@ -106,6 +143,36 @@ public class MainActivity extends Activity implements Detector.ImageListener {
                     Log.d(TAG, "Error: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    private class EmotionResults {
+        private float happiness;
+        private float sadness;
+        private float anger;
+        private float engagement;
+
+        public EmotionResults(float happiness, float sadness, float anger, float engagement) {
+            this.happiness = happiness;
+            this.sadness = sadness;
+            this.anger = anger;
+            this.engagement = engagement;
+        }
+
+        public float getHappiness() {
+            return happiness;
+        }
+
+        public float getSadness() {
+            return sadness;
+        }
+
+        public float getAnger() {
+            return anger;
+        }
+
+        public float getEngagement() {
+            return engagement;
         }
     }
 
@@ -171,7 +238,12 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         container.removeAllViews();
 
         if(token != null){
-            fetchUserIdFromName(username.getText().toString());
+            try {
+                Integer result = Integer.parseInt(username.getText().toString());
+                fetchMediaFromUserId(result);
+            } catch (NumberFormatException nfe){
+                fetchUserIdFromName(username.getText().toString());
+            }
         } else {
             Log.d(TAG, "Token was null!");
             mApp.authorize();
@@ -218,6 +290,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
     private void displayImages(MediaResult.MediaElement[] data) {
         this.currentIndex = 0;
         this.imageData = data;
+        this.results = new ArrayList<>();
         analyze.setEnabled(true);
 
         for(MediaResult.MediaElement me : data){
@@ -226,9 +299,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
             View v = LayoutInflater.from(this).inflate(R.layout.image_list_item, container, false);
 
             String url = me.getImages().getLowResolution().getUrl();
-            Log.d(TAG, "Image URL: " + url);
             long time = Long.valueOf(me.getCreatedTime()) * 1000L;
-            Log.d(TAG, "Time: " + time);
 
             Picasso.with(this).load(url).into(((ImageView) v.findViewById(R.id.thumbnail)));
             ((TextView) v.findViewById(R.id.date)).setText(timeFormat.format(new Date(time)));
@@ -249,30 +320,34 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         new ImageDownloadTask().execute();
     }
 
-    public Bitmap getBitmapFromAsset(Context context, String filePath) throws IOException {
-        AssetManager assetManager = context.getAssets();
-
-        InputStream istr;
-        Bitmap bitmap;
-        istr = assetManager.open(filePath);
-        bitmap = BitmapFactory.decodeStream(istr);
-
-        return bitmap;
-    }
-
-    public Bitmap getBitmapFromUri(Uri uri) throws FileNotFoundException {
-        InputStream istr;
-        Bitmap bitmap;
-        istr = getContentResolver().openInputStream(uri);
-        bitmap = BitmapFactory.decodeStream(istr);
-
-        return bitmap;
-    }
-
     @Override
     public void onImageResults(List<Face> faces, Frame image, float timestamp) {
 
         Log.d(TAG, "Found " + faces.size() + " faces for index " + currentIndex);
+
+        if(faces.size() > 0) {
+            float happy = 0;
+            float sad = 0;
+            float anger = 0;
+            float engagement = 0;
+            for (int i = 0; i < faces.size(); i++) {
+                Face f = faces.get(i);
+
+                happy += f.emotions.getJoy();
+                sad += f.emotions.getSadness();
+                anger += f.emotions.getAnger();
+                engagement += f.emotions.getEngagement();
+            }
+            happy /= faces.size();
+            sad /= faces.size();
+            anger /= faces.size();
+            engagement /= faces.size();
+
+            results.add(new EmotionResults(happy, sad, anger, engagement));
+
+            Log.d(TAG, "Results of processing: happy=" + happy + ", sad=" + sad + ", " +
+                    "anger=" + anger + ", engagement=" + engagement);
+        }
 
         currentIndex++;
         ad.setMessage(currentIndex + "/" + imageData.length + " processed");
