@@ -38,6 +38,7 @@ import com.hackathon.igfeels.instagramApi.UserEntry;
 import com.hackathon.igfeels.instagramApi.UserProfileResult;
 import com.hackathon.igfeels.instagramApi.UserQueryResult;
 import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.ResponseBody;
 import com.squareup.picasso.Picasso;
 
 import java.io.FileNotFoundException;
@@ -126,24 +127,24 @@ public class MainActivity extends Activity implements Detector.ImageListener {
                     wv.getSettings().setBuiltInZoomControls(true);
                     wv.getSettings().setJavaScriptEnabled(true);
 
-                    EmotionResults mostRecent = results.get(0);
+                    final EmotionResults mostRecent = results.get(0);
 
                     String title = "";
                     String alert = "";
                     if(greaterThanAllOthers(mostRecent.getAnger(), mostRecent.getSadness(),
                             mostRecent.getEngagement(), mostRecent.getHappiness())){
-                        title = "Anger!";
+                        title = "anger";
                         alert = "shock";
                     } else if (greaterThanAllOthers(mostRecent.getHappiness(), mostRecent.getSadness(),
                             mostRecent.getEngagement(), mostRecent.getAnger())) {
-                        title = "Happiness!";
+                        title = "happiness";
                         alert = "vibrate";
                     } else if (greaterThanAllOthers(mostRecent.getSadness(), mostRecent.getAnger(),
                             mostRecent.getEngagement(), mostRecent.getHappiness())) {
-                        title = "Sadness :(";
+                        title = "sadness";
                         alert = "beep";
                     } else {
-                        title = "Engagement?";
+                        title = "engagement";
                         alert = "vibrate";
                     }
 
@@ -152,18 +153,24 @@ public class MainActivity extends Activity implements Detector.ImageListener {
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Emotions Graph")
                             .setView(wv)
-                            .setPositiveButton("Okay", null)
-                            .setNeutralButton("Send " + title, new DialogInterface.OnClickListener() {
+                            .setPositiveButton("Done", null)
+                            .setNeutralButton("Share " + title, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
+
                                     PavlokApiFactory.getApi().sendAlert(objectId,
-                                            finalAlert, finalAlert).enqueue(new Callback<EmptyResponse>() {
+                                            finalAlert,
+                                            String.format(Locale.US, "Your predominant emotion is %s! (Anger %.0f%%, Sadness %.0f%%, Engagement %.0f%%, Happiness %.0f%%)",
+                                                    finalTitle, mostRecent.getAnger(), mostRecent.getSadness(), mostRecent.getEngagement(), mostRecent.getHappiness()))
+                                            .enqueue(new Callback<ResponseBody>() {
                                         @Override
-                                        public void onResponse(Response<EmptyResponse> response, Retrofit retrofit) {
+                                        public void onResponse(Response<ResponseBody> response, Retrofit retrofit) {
+                                            Toast.makeText(MainActivity.this, finalTitle + " shared.", Toast.LENGTH_SHORT).show();
                                         }
 
                                         @Override
                                         public void onFailure(Throwable t) {
+                                            Log.d(TAG, "Failure!");
                                         }
                                     });
                                 }
@@ -178,8 +185,14 @@ public class MainActivity extends Activity implements Detector.ImageListener {
             } else {
                 try {
                     detection = new PhotoDetector(MainActivity.this);
-                    detection.setDetectAllEmotions(true); //emotions
-                    detection.setDetectAllExpressions(true); //expressions
+
+                    detection.setDetectAllEmotions(false);
+                    detection.setDetectAllExpressions(false);
+                    detection.setDetectSadness(true);
+                    detection.setDetectAnger(true);
+                    detection.setDetectJoy(true);
+                    detection.setDetectEngagement(true);
+
                     detection.setLicensePath("Affdex.license");
                     detection.setImageListener(MainActivity.this);
 
@@ -292,12 +305,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         container.removeAllViews();
 
         if(token != null){
-            try {
-                Integer result = Integer.parseInt(username.getText().toString());
-                fetchMediaFromUserId(result);
-            } catch (NumberFormatException nfe){
-                fetchUserIdFromName(username.getText().toString());
-            }
+            fetchUserIdFromName(username.getText().toString());
         } else {
             Log.d(TAG, "Token was null!");
             mApp.authorize();
@@ -305,11 +313,12 @@ public class MainActivity extends Activity implements Detector.ImageListener {
     }
 
     public void fetchUserIdFromName(String name){
-        ApiFactory.getApi().getUserId(name, 1, token).enqueue(new Callback<UserQueryResult>() {
+        ApiFactory.getApi().getUserId(name, token).enqueue(new Callback<UserQueryResult>() {
             @Override
             public void onResponse(Response<UserQueryResult> response, Retrofit retrofit) {
                 if(response.isSuccess() && response.body() != null && response.body().getData() != null && response.body().getData().length > 0){
-                    fetchMediaFromUserId(response.body().getData()[0].getId());
+                    String userId = response.body().getData()[0].getId();
+                    fetchMediaFromUserId(Long.valueOf(userId));
                 } else {
                     Toast.makeText(MainActivity.this, "No matching user found.", Toast.LENGTH_SHORT).show();
                 }
@@ -322,7 +331,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         });
     }
 
-    private void fetchUserProfile(final int userId){
+    private void fetchUserProfile(final long userId){
         ApiFactory.getApi().getUserProfile(String.valueOf(userId), token).enqueue(new Callback<UserProfileResult>() {
             @Override
             public void onResponse(Response<UserProfileResult> response, Retrofit retrofit) {
@@ -345,7 +354,7 @@ public class MainActivity extends Activity implements Detector.ImageListener {
         });
     }
 
-    public void fetchMediaFromUserId(final int userId){
+    public void fetchMediaFromUserId(final long userId){
         ApiFactory.getApi().getUserMedia(String.valueOf(userId), token).enqueue(new Callback<MediaResult>() {
             @Override
             public void onResponse(Response<MediaResult> response, Retrofit retrofit) {

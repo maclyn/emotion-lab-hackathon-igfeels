@@ -2,10 +2,10 @@ package com.hackathon.igfeels.instagramApi;
 
 public class UserEntry {
     private String username;
-    private int id;
+    private String id;
     private String bio;
 
-    public UserEntry(String username, int id, String bio) {
+    public UserEntry(String username, String id, String bio) {
         this.username = username;
         this.id = id;
         this.bio = bio;
@@ -15,7 +15,7 @@ public class UserEntry {
         return username;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 

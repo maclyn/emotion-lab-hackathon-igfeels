@@ -13,7 +13,6 @@ import retrofit.http.Query;
 public interface ApiInterface {
     @GET("users/search")
     Call<UserQueryResult> getUserId(@Query("q") String username,
-                                    @Query("count") int count,
                                     @Query("access_token") String authToken);
 
     @GET("users/{user-id}")

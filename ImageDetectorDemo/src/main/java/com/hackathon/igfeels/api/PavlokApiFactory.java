@@ -9,11 +9,7 @@ import retrofit.Retrofit.Builder;
 
 public class PavlokApiFactory {
     public static PavlokApiInterface getApi(){
-        OkHttpClient client = new OkHttpClient();
-        client.setFollowRedirects(false);
-
         Retrofit ra = new Builder()
-                .client(client)
                 .addConverterFactory(GsonConverterFactory.create())
                 .baseUrl("https://pavlok.herokuapp.com/")
                 .build();
