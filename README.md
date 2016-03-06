@@ -4,4 +4,4 @@ For Emotion Lab Hackathon '16.
 
 Credits:
 Based off of Affectiva's ImageDetector demo.
-Uses Retrofit, Picasso, [https://github.com/thiagolocatelli/android-instagram-oauth](Instagram oauth).
+Uses Retrofit, Picasso, [Instagram OAuth](https://github.com/thiagolocatelli/android-instagram-oauth).
